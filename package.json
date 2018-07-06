@@ -1,0 +1,13 @@
+{
+  "name": "ReadlineChat",
+  "version": "1.0.0",
+  "description": "CLI chat with readline and socket.io",
+  "author": "Matt Harzewski",
+  "dependencies": {
+    "ansi-color": "latest",
+    "node-notifier": "^5.2.1",
+    "socket.io": "latest",
+    "socket.io-client": "latest"
+  },
+  "private": true
+}
