@@ -55,6 +55,7 @@ function chat_command(cmd, arg) {
                 socket.emit('send', { type , receiverComputerName, message });
                 rl.prompt(true);
                 lastWhisperedUser = receiverComputerName;
+                console_out(color(`You -> ${receiverComputerName}: ${message}`, 'magenta'));
                 return;
             }
                 console_out(color('A proper whisper looks like this "/w x90562 Hello there!"', "yellow"));
@@ -82,7 +83,7 @@ function chat_command(cmd, arg) {
                 console_out(color('Notifications turned ON', 'yellow'));
                 return;
             }
-                console_out(color('Notifications turned OFF', 'red'));
+            console_out(color('Notifications turned OFF', 'red'));
             break;
         }
         case CommandType._roll: {
