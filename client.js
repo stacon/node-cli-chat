@@ -1,27 +1,22 @@
 'use strict'
-
 const { MessageType, CommandType } = require('./src/enums.js')
-const { notify, showAvailableCommands } = require('./src/clientFunctions.js')
-const readline = require('readline'),
-    socketio = require('socket.io-client'),
+const { notify, showAvailableCommands, console_out, rl } = require('./src/clientFunctions.js')
+const socketio = require('socket.io-client'),
     color = require("ansi-color").set,
-    socket = socketio.connect('http://10.3.23.141:3636'),
     os = require('os'),
     computerName = os.userInfo().username,
-    rl = readline.createInterface(process.stdin, process.stdout);
+    socket = socketio.connect('http://10.3.23.141:3636'),
+    user = new User();
 
 // Notifications appear based on this boolean's value
 let receivingNotifications = true;
-
-const user = new User();
+let lastWhisperedUser = null;
 
 rl.question("Please enter a nickname: ", name => {
     user.changeNickName(name);
     socket.emit('connectAnnounce', { type: 'event', user });
     rl.prompt(true);
 });
-
-
 
 rl.on('line', line => {
     if (line[0] == "/" && line.length > 1) {
@@ -38,83 +33,114 @@ rl.on('line', line => {
 
 function chat_command(cmd, arg) {
     switch (cmd) {
-        case CommandType._emote:
+        case CommandType._emote: {
             const emote = user.fullname + " " + arg;
             socket.emit('send', { type: MessageType._emote, message: emote });
             break;
+        }
 
-        case CommandType._tfs:
+        case CommandType._tfs: {
             socket.emit('send', { type: MessageType._tfs, tfsNumber: arg, nick: user.fullname });
             break;
+        }
 
-        case CommandType._whisper:
-            socket.emit('send', { type: MessageType._whisper, message: arg });
+        case CommandType._whisper: {
+            const whisper = {
+                type: MessageType._whisper,
+                receiverComputerName: arg.substr(0, 6),
+                message: arg.substr(7, arg.length)
+            };
+            const { receiverComputerName, type, message } = whisper;
+            if (receiverComputerName[0] === 'x' && receiverComputerName.match(/^x\d{5}$/) && receiverComputerName.length === 6) {
+                socket.emit('send', { type , receiverComputerName, message });
+                rl.prompt(true);
+                lastWhisperedUser = receiverComputerName;
+                return;
+            }
+                console_out(color('A proper whisper looks like this "/w x90562 Hello there!"', "yellow"));
+                break;
+        }
+
+        case CommandType._whisperToPrevious: {
+            if (lastWhisperedUser) {
+                chat_command(CommandType._whisper, `${lastWhisperedUser} ${arg}`)
+                return;
+            }
+            console_out(color('You haven\'t whispered to someone yet', 'yellow'));
             break;
-        
-        case CommandType._rename:
+        }
+
+        case CommandType._rename: {
             user.changeNickName(arg)
             socket.emit('server_request', { type: CommandType._rename , newNickname: user.nickname });
             break;
+        }
 
-        case CommandType._toggle_notifications:
+        case CommandType._toggle_notifications: {
             receivingNotifications = !receivingNotifications;
             if (receivingNotifications) {
-                console_out(color('Notifications turned ON', 'yellow'))
-            } else {
-                console_out(color('Notifications turned OFF', 'red'))
+                console_out(color('Notifications turned ON', 'yellow'));
+                return;
             }
+                console_out(color('Notifications turned OFF', 'red'));
             break;
-        case CommandType._roll:
+        }
+        case CommandType._roll: {
             if (arg && !isNaN(arg) && arg > 0) {
                 rollDice(arg);
             } else {
                 rollDice(1);
             }
             break;
-        case CommandType._online:
+        }
+        case CommandType._online: {
             socket.emit('server_request', {type: CommandType._online});
             break;
+        }
         default:
             showAvailableCommands();
     }
 }
 
 socket.on('message', data => {
-    let leader;
-
     switch (data.type) {
-        case MessageType._chat:
+        case MessageType._chat: {
             if (data.nick != user.fullname) {
-                leader = color("<" + data.nick + "> ", "green");
-                notify(`${data.message}`, `${data.nick} says:`)
-                console_out(leader + data.message);
+                const leader = color("<" + data.nick + "> ", "green");
+                console_out(color(leader + data.message, 'magenta'));
+                notify(receivingNotifications,`${data.message}`, `${data.nick} says:`)
             }
             break;
-        case MessageType._whisper:
-            //TODO: pluck computerName
-            //TODO: if computerName equals this user.computerName console data in purple
-            const msg = `Name whispers to you: ${data.message}`;
+        }
+        case MessageType._whisper:{
+            const { senderFullName, message } = data;
+            const msg = `${senderFullName} whispers to you: ${message}`;
             console_out(color(msg, 'magenta'));
+            notify(receivingNotifications,`${message}`, `${senderFullName} whispers... :`)
             break;
-        case MessageType._notice:
+        }
+        case MessageType._notice: {
             console_out(color(data.message, 'cyan'));
             if (data.nick && data.nick != user.fullname) {
-                notify(`${data.message}`, `New Notification`)
+                notify(receivingNotifications,`${data.message}`, `New Notification`)
             }
             break;
-        case MessageType._emote:
+        }
+        case MessageType._emote: {
             console_out(color(data.message, "cyan"));
             if (data.nick != user.fullname) {
-                notify(`${data.nick} ${data.message}`)
+                notify(receivingNotifications,`${data.nick} ${data.message}`)
             }
             break;
-        case MessageType._tfs:
+        }
+        case MessageType._tfs: {
             const message = `   TFS WorkItem suggested by ${data.nick}:\n   http://teamfs2010:8080/tfs/DefaultCollection/CBS_UFE/_workitems?id=${data.tfsNumber}`;
             console_out(color(message, 'yellow'));
             if (data.nick != user.fullname) {
-                notify(`${data.nick} provided link for TFS: ${message}`, 'TFS Link posted')
+                notify(receivingNotifications,`${data.nick} provided link for TFS: ${message}`, 'TFS Link posted')
             }
             break;
+        }
         default:
             null;
     }
@@ -130,24 +156,20 @@ function User(nickname = null) {
     }
 }
 
-function console_out(msg) {
-    process.stdout.clearLine();
-    process.stdout.cursorTo(0);
-    console.log(msg);
-    rl.prompt(true);
-}
+
 
 function rollDice(numberOfDice) {
     let dice = [];
     let result = 0;
     let msg = '';
+    let diceRolledString = '';
     
     for (let i = 0; i < numberOfDice; i++){
-        let roll = Math.floor(Math.random() * 6) + 1;
+        const roll = Math.floor(Math.random() * 6) + 1;
         dice.push(roll);
         result += roll
     }
-    const diceRolledString = dice.reduce((total, num) =>{
+    diceRolledString = dice.reduce((total, num) =>{
         return total +`[${num}]`
     }, '')
     

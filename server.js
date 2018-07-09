@@ -4,6 +4,7 @@ const { MessageType, CommandType } = require('./src/enums.js');
 const color = require("ansi-color").set;
 
 let onlineUsers =[];
+let onlineUsersMapToSocket = new Map();
 
 // Listen on port 3636
 const io = socketio.listen(3636);
@@ -13,12 +14,22 @@ io.sockets.on('connection', socket => {
     let socketUser = new User();
 
     socket.on('send', data => {
-        io.sockets.emit('message', data);
+        if (data.type === MessageType._whisper) {
+            const { receiverComputerName, message, type } = data;
+            if (!onlineUsersMapToSocket.get(receiverComputerName)) {
+                socket.emit('message', {type: MessageType._notice, message: `Receiver ${receiverComputerName} not found!`})
+                return;
+            }
+            onlineUsersMapToSocket.get(receiverComputerName).emit('message', {type, message, senderFullName: socketUser.fullname})
+        } else {
+            io.sockets.emit('message', data);
+        }
     });
     
     socket.on('connectAnnounce', data => {
         socketUser = Object.assign(socketUser,data.user,{ socketId: socket.id });
         onlineUsers.push(socketUser);
+        onlineUsersMapToSocket.set(socketUser.computerName,socket);
         console.info(color(`${socketUser.fullname} connected`, 'green'));
         const msg = socketUser.fullname + " has joined the chat"
         io.sockets.emit('message', {type: MessageType._notice, message: msg})
@@ -41,7 +52,6 @@ io.sockets.on('connection', socket => {
                     if(user.fullname === socketUser.fullname)
                         user.fullname = socketUser.computerName + ' - ' + newNickname;
                     return user;
-                    
                 });
                 socketUser.changeNickName(newNickname);
                 break;

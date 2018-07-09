@@ -3,6 +3,7 @@ const CommandType = {
     _rename: 'nick',
     _tfs: 'tfs',
     _whisper: 'w',
+    _whisperToPrevious: 'r',
     _toggle_notifications: 'tn',
     _roll: 'roll',
     _online: 'online'
