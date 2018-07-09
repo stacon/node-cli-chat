@@ -39,7 +39,7 @@ io.sockets.on('connection', socket => {
         switch  (data.type) {
             case CommandType._online:
                 console.log(color(`${socketUser.fullname} requested who is online..`, 'yellow'));
-                let onlineUsersToReturn = onlineUsers.reduce((total, user) => `${total}\n  ${user.fullname}`,`  Online Users:"\n`);
+                let onlineUsersToReturn = onlineUsers.reduce((total, user) => `${total}\n  ${user.fullname}`,`  Online Users:\n`);
                 socket.emit('message', {type: MessageType._notice, message: onlineUsersToReturn});
                 break;
 
