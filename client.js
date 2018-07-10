@@ -1,11 +1,16 @@
 'use strict'
-const { MessageType, CommandType } = require('./src/enums.js')
-const { notify, showAvailableCommands, console_out, rl } = require('./src/clientFunctions.js')
-const socketio = require('socket.io-client'),
-    color = require("ansi-color").set,
-    os = require('os'),
-    computerName = os.userInfo().username,
-    socket = socketio.connect('http://10.3.23.141:3636'),
+const { MessageType,
+        CommandType,
+        color } = require('./src/common.js'),
+{
+    notify,
+    showAvailableCommands,
+    console_out,
+    rl,
+    socket,
+    computerName,
+    executeServerCommand
+} = require('./src/clientFunctions.js'),
     user = new User();
 
 // Notifications appear based on this boolean's value
@@ -19,8 +24,8 @@ rl.question("Please enter a nickname: ", name => {
 });
 
 rl.on('line', line => {
-    if (line[0] == "/" && line.length > 1) {
-        const cmd = line.match(/[a-z]+\b/)[0];
+    if (line[0] === "/" && line.length > 1) {
+        const cmd = line.match(/[A-z]+\b/)[0].toLowerCase();
         const arg = line.substr(cmd.length + 2, line.length);
         chat_command(cmd, arg);
 
@@ -35,7 +40,7 @@ function chat_command(cmd, arg) {
     switch (cmd) {
         case CommandType._emote: {
             const emote = user.fullname + " " + arg;
-            socket.emit('send', { type: MessageType._emote, message: emote });
+            socket.emit('send', { type: MessageType._notice, message: emote });
             break;
         }
 
@@ -51,7 +56,7 @@ function chat_command(cmd, arg) {
                 message: arg.substr(7, arg.length)
             };
             const { receiverComputerName, type, message } = whisper;
-            if (receiverComputerName[0] === 'x' && receiverComputerName.match(/^x\d{5}$/) && receiverComputerName.length === 6) {
+            if (receiverComputerName[0].toLowerCase() === 'x' && receiverComputerName.match(/^x\d{5}$/) && receiverComputerName.length === 6) {
                 socket.emit('send', { type , receiverComputerName, message });
                 rl.prompt(true);
                 lastWhisperedUser = receiverComputerName;
@@ -98,6 +103,21 @@ function chat_command(cmd, arg) {
             socket.emit('server_request', {type: CommandType._online});
             break;
         }
+        case CommandType._serverCommand: {
+            const commandArgs = arg.split(" ");
+            const command = {
+                type: CommandType._serverCommand,
+                option: commandArgs[0],
+                target: commandArgs[1] || 'all',
+                message: commandArgs[2] || ' '
+            };
+            socket.emit('server_request', command);
+            rl.prompt(true);
+            break;
+        }
+        case CommandType._exit: {
+            process.exit(1);
+        }
         default:
             showAvailableCommands();
     }
@@ -123,14 +143,7 @@ socket.on('message', data => {
         case MessageType._notice: {
             console_out(color(data.message, 'cyan'));
             if (data.nick && data.nick != user.fullname) {
-                notify(receivingNotifications,`${data.message}`, `New Notification`)
-            }
-            break;
-        }
-        case MessageType._emote: {
-            console_out(color(data.message, "cyan"));
-            if (data.nick != user.fullname) {
-                notify(receivingNotifications,`${data.nick} ${data.message}`)
+                notify(receivingNotifications,data.message, `New Notification`)
             }
             break;
         }
@@ -140,6 +153,16 @@ socket.on('message', data => {
             if (data.nick != user.fullname) {
                 notify(receivingNotifications,`${data.nick} provided link for TFS: ${message}`, 'TFS Link posted')
             }
+            break;
+        }
+        case MessageType._error: {
+            const { message } = data;
+            console_out(color(message, 'red'));
+            notify(true,message,'ERROR')
+            break;
+        }
+        case MessageType._serverCommand: {
+            executeServerCommand(data);
             break;
         }
         default:
@@ -157,20 +180,17 @@ function User(nickname = null) {
     }
 }
 
-
-
 function rollDice(numberOfDice) {
     let dice = [];
     let result = 0;
     let msg = '';
-    let diceRolledString = '';
     
     for (let i = 0; i < numberOfDice; i++){
         const roll = Math.floor(Math.random() * 6) + 1;
         dice.push(roll);
         result += roll
     }
-    diceRolledString = dice.reduce((total, num) =>{
+    const diceRolledString = dice.reduce((total, num) =>{
         return total +`[${num}]`
     }, '')
     
