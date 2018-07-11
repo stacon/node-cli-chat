@@ -1,4 +1,6 @@
-const color = require("ansi-color").set;
+const color = require("ansi-color").set,
+    readline = require('readline'),
+    rl = readline.createInterface(process.stdin, process.stdout);
 
 const CommandType = {
     _emote: 'me',
@@ -27,4 +29,11 @@ const ServerCommand = {
     _kick: 'kick'
 }
 
-module.exports = { MessageType, CommandType, ServerCommand, color }
+function console_out(msg) {
+    process.stdout.clearLine();
+    process.stdout.cursorTo(0);
+    console.log(msg);
+    rl.prompt(true);
+}
+
+module.exports = { MessageType, CommandType, ServerCommand, color, console_out, rl}

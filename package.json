@@ -1,6 +1,6 @@
 {
-  "name": "ReadlineChat",
-  "version": "1.0.0",
+  "name": "Cli-Chat",
+  "version": "0.5.6",
   "description": "CLI chat with readline and socket.io",
   "author": "Matt Harzewski",
   "dependencies": {
