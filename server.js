@@ -1,16 +1,22 @@
 'use strict';
 const socketio = require('socket.io');
+const { log, NotificationColor } = require('./src/server/functions/log.js');
+const { registeredUsers } = require('./src/server/data/registeredUsers.js');
+const Server = require('./src/server/models/Server.js');
 const { MessageType, CommandType, ServerCommand, color } = require('./src/common.js');
 
+const server = new Server();
 let onlineUsers =[];
 let onlineUsersMapToSocket = new Map();
 
 // Listen on port 3636
 const io = socketio.listen(3636);
-console.log(color(`Server is now online..`,'yellow'));
+log('Server is now online..', NotificationColor._positive);
 
 io.sockets.on('connection', socket => {
     let socketUser = new User();
+    const clientUser = fetchRegisteredUserBySocketIP(socket);
+    server.onlineUsers = [...server.onlineUsers, clientUser ];
 
     socket.on('send', data => {
         if (data.type === MessageType._whisper) {
@@ -31,12 +37,14 @@ io.sockets.on('connection', socket => {
             const message = 'You are already logged in the chat';
             const command = ServerCommand._terminate;
             socket.emit('message', {type: MessageType._serverCommand, message, command});
+            socket.disconnect();
             return;
         }
-        socketUser = Object.assign(socketUser,data.user,{ socketId: socket.id });
+        clientUser.setNickname(data.user.nickname);
+        socketUser = Object.assign(socketUser, data.user,{ socketId: socket.id });
         onlineUsers.push(socketUser);
         onlineUsersMapToSocket.set(socketUser.computerName.toLowerCase(),socket);
-        console.info(color(`${socketUser.fullname} connected`, 'green'));
+        log(`${socketUser.fullname} connected`, NotificationColor._positive);
         const msg = socketUser.fullname + " has joined the chat"
         io.sockets.emit('message', {type: MessageType._notice, message: msg})
     })
@@ -44,7 +52,7 @@ io.sockets.on('connection', socket => {
     socket.on('server_request', data =>{
         switch  (data.type) {
             case CommandType._online: {
-                console.log(color(`${socketUser.fullname} requested who is online..`, 'yellow'));
+                log(`${socketUser.fullname} requested who is online..`, NotificationColor._notice);
                 let onlineUsersToReturn = onlineUsers.reduce((total, user) => `${total}\n  ${user.fullname}`, `  Online Users:\n`);
                 socket.emit('message', {type: MessageType._notice, message: onlineUsersToReturn});
                 break;
@@ -52,8 +60,9 @@ io.sockets.on('connection', socket => {
 
             case CommandType._rename: {
                 const {newNickname} = data
+                clientUser.setNickname(newNickname);
                 const message = socketUser.fullname + " changed their name to " + newNickname;
-                console.log(color(message, 'yellow'));
+                log(message, NotificationColor._alert);
                 io.sockets.emit('message', {type: MessageType._notice, message});
                 onlineUsers = onlineUsers.map(user => {
                     if (user.fullname === socketUser.fullname)
@@ -76,7 +85,7 @@ io.sockets.on('connection', socket => {
             }
             default: {
                 const message = 'Server Request invalid';
-                console.log(color(message, 'red'));
+                log(message, NotificationColor._danger);
                 socket.emit('message', {type: MessageType._error, message});
             }
 
@@ -85,7 +94,7 @@ io.sockets.on('connection', socket => {
 
     socket.on('disconnect', () => {
         const message = `${socketUser.fullname} disconnected`;
-        console.log(color(message, 'red'));
+        log(message, NotificationColor._danger);
         if (socketUser.fullname !== undefined) {
             io.sockets.emit('message', {type: MessageType._notice, message });
         }
@@ -105,6 +114,21 @@ function User(nickname = null, computerName = null) {
         this.nickname = newNickName.trim();
         this.fullname = this.computerName.toLowerCase() + ' - ' + newNickName;
     }
+}
+
+function fetchRegisteredUserBySocketIP(socket) {
+    if (registeredUsers.filter(user => user.ip === getSocketIp(socket)).length === 1) {
+        return registeredUsers.filter(user => user.ip === getSocketIp(socket))[0];
+    }
+    return {};
+}
+
+function getSocketIp(socket) {
+    return socket.request.connection.remoteAddress.substr(7);
+}
+
+function broadcast(broadcastObj) {
+    return io.sockets.emit(broadcastObj);
 }
 
 // *** Server Commands ***

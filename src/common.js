@@ -29,6 +29,13 @@ const ServerCommand = {
     _kick: 'kick'
 }
 
+const Status = {
+    _offline: 'offline',
+    _online: 'online',
+    _afk: 'afk',
+    _busy: 'busy'
+};
+
 function console_out(msg) {
     process.stdout.clearLine();
     process.stdout.cursorTo(0);
@@ -36,4 +43,4 @@ function console_out(msg) {
     rl.prompt(true);
 }
 
-module.exports = { MessageType, CommandType, ServerCommand, color, console_out, rl}
+module.exports = { MessageType, CommandType, ServerCommand, color, console_out, rl, Status}
