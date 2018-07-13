@@ -1,15 +1,15 @@
 const { color } = require('../../common.js');
 
-function log(type, message = NotificationColor._default) {
+function log(message, type = NotificationColor._default) {
     console.log(color(message, type));
 }
 
 const NotificationColor = {
-    _default = 'off',
-    _notice = 'cyan',
-    _positive = 'green',
-    _alert = 'red',
-    _danger = 'yellow',
+    _default : 'off',
+    _notice : 'cyan',
+    _positive : 'green',
+    _alert : 'yellow',
+    _danger : 'red',
 }
 
 module.exports = { log, NotificationColor };

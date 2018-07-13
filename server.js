@@ -2,8 +2,8 @@
 const socketio = require('socket.io');
 const { log, NotificationColor } = require('./src/server/functions/log.js');
 const { registeredUsers } = require('./src/server/data/registeredUsers.js');
-const Server = require('./src/server/models/Server.js');
-const { MessageType, CommandType, ServerCommand, color } = require('./src/common.js');
+const Server = require('./src/server/models/Server.model.js');
+const { MessageType, CommandType, ServerCommand } = require('./src/common.js');
 
 const server = new Server();
 let onlineUsers =[];

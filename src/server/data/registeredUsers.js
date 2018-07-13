@@ -1,4 +1,4 @@
-const User = require('../models/User.js'),
+const User = require('../models/User.model.js'),
     { Status } = require('../../common.js');
 
 const registeredUsers = [
@@ -9,7 +9,9 @@ const registeredUsers = [
     new User({ip: '10.3.23.124', computerName: 'x90582', fullName: 'Kagiema S.'}),
     new User({ip: '10.3.23.127', computerName: 'x90455', fullName: 'Gikas P.'}),
     new User({ip: '10.3.23.132', computerName: 'x89103', fullName: 'Mavraganis V.'}),
-    new User({ip: '10.0.240.23', computerName: 'x90577', fullName: 'Sanidas G.'})
+    new User({ip: '10.3.23.76' , computerName: 'x90577', fullName: 'Sanidas G.'}),
+    new User({ip: '10.3.23.115', computerName: 'x90579', fullName: 'Fitsilis T.'}),
+    new User({ip: '10.3.23.106', computerName: 'x90577', fullName: 'Bairaktaris P.'}),
 ];
 
 module.exports = { registeredUsers };

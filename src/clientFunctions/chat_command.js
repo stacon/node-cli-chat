@@ -32,6 +32,7 @@ function chat_command(data) {
             if (receiverComputerName[0] && receiverComputerName[0].toLowerCase() === 'x' && receiverComputerName.match(/^x\d{5}$/) && receiverComputerName.length === 6) {
                 socket.emit('send', { type , receiverComputerName, message });
                 rl.prompt(true);
+                user.lastWhisperedUser = receiverComputerName;
                 console_out(color(`You -> ${receiverComputerName}: ${message}`, 'magenta'));
                 return;
             }
@@ -39,14 +40,19 @@ function chat_command(data) {
             break;
         }
 
-        // case CommandType._whisperToPrevious: { //TODO: Rework on server side
-        //     if (lastWhisperedUser) {
-        //         chat_command(CommandType._whisper, `${lastWhisperedUser} ${arg}`);
-        //         return;
-        //     }
-        //     console_out(color('You haven\'t whispered to someone yet', 'yellow'));
-        //     break;
-        // }
+        case CommandType._whisperToPrevious: { //TODO: TO be refactored on server side
+            const newArg = `${user.lastWhisperedUser} ${arg}`;
+            if (user.lastWhisperedUser) {
+                chat_command({
+                    cmd: CommandType._whisper,
+                    arg: newArg,
+                    user
+                });
+                return;
+            }
+            console_out(color('You haven\'t whispered to someone yet', 'yellow'));
+            break;
+        }
 
         case CommandType._rename: {
             user.changeNickName(arg);

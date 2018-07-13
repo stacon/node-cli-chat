@@ -8,7 +8,7 @@ function showAvailableCommands() {
     console_out(" ");
     console_out(" /nick           {arg}   - changes your nickname to arg");
     console_out(" /w {x*****} {message}   - send a private message via computer name");
-    // console_out(" /r                      - Sends whisper to the last person you whispered to");
+    console_out(" /r                      - Sends whisper to the last person you whispered to");
     console_out(" /on                     - NEW SHORTER COMMAND: see who is online");
     console_out(" /me             {arg}   - make a third person emote");
     console_out(" /tfs             {id}   - using work item id a link is produced");
