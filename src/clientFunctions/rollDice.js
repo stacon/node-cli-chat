@@ -1,26 +1,30 @@
-const { socket, MessageType } = require('../common.js');
+const { MessageType } = require('../common.js'),
+    { socket } = require('./clientInit.js');
 
 function rollDice(user, numberOfDice) {
-    let dice = [];
-    let result = 0;
-    let msg = '';
+    const roll = {}
+    roll.dice = [];
+    roll.result = 0;
+    roll.diceRolledString = '';
+    roll.msg = '';
 
     for (let i = 0; i < numberOfDice; i++){
-        const roll = Math.floor(Math.random() * 6) + 1;
-        dice.push(roll);
-        result += roll
+        const rollOneDie = Math.floor(Math.random() * 6) + 1;
+        roll.dice = [ ...roll.dice, rollOneDie];
+        roll.result += rollOneDie
     }
-    const diceRolledString = dice.reduce((total, num) =>{
+
+    roll.diceRolledString = roll.dice.reduce((total, num) =>{
         return total +`[${num}]`
     }, '');
 
     if (numberOfDice > 1) {
-        msg = `${user.fullname} rolled ${result} with ${numberOfDice} dice from ${diceRolledString}`
+        roll.msg = `${user.fullname} rolled ${roll.result} with ${numberOfDice} dice from ${roll.diceRolledString}`
     } else {
-        msg = `${user.fullname} rolled ${result} with 1 die`
+        roll.msg = `${user.fullname} rolled ${roll.result} with 1 die`
     }
 
-    socket.emit('send', { type: MessageType._notice, message: msg });
+    socket.emit('send', { type: MessageType._notice, message: roll.msg });
 }
 
 module.exports = { rollDice };
